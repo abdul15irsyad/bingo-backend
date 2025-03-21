@@ -1,21 +1,33 @@
 package handler
 
 import (
-	"bingo/data"
+	"bingo/config"
 	"bingo/dto"
+	"bingo/lib"
+	"bingo/model"
 	"bingo/service"
 	"bingo/util"
-	"bingo/validation"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-func Register(c *gin.Context) {
+type AuthHandler struct {
+	userService *service.UserService
+}
+
+func NewAuthHandler(us *service.UserService) *AuthHandler {
+	lib.Logger.Info("NewAuthHandler initialized")
+	return &AuthHandler{us}
+}
+
+func (h *AuthHandler) Register(c *gin.Context) {
 	var registerDTO dto.RegisterDTO
 	c.ShouldBindJSON(&registerDTO)
-	validationErrors := validation.Validate(c, registerDTO)
+	validationErrors := lib.Validate(c, registerDTO)
 	if len(validationErrors) > 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "Bad Request",
@@ -24,7 +36,7 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	if len(data.Users) >= data.MaxUser {
+	if len(h.userService.Users) >= h.userService.MaxUser {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "Bad Request",
 			"code":    "MAX_USER_EXCEED",
@@ -34,7 +46,7 @@ func Register(c *gin.Context) {
 	}
 
 	trimmedUsername := strings.TrimSpace(registerDTO.Username)
-	if userWithUsernameExist := util.FindSlice(&data.Users, func(user data.User) bool {
+	if userWithUsernameExist := util.FindSlice(&h.userService.Users, func(user model.User) bool {
 		return util.Slugify(user.Username) == util.Slugify(trimmedUsername)
 	}); userWithUsernameExist != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
@@ -50,14 +62,37 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	newUser := service.AddUser(service.AddUserDTO{
+	newUser := h.userService.AddUser(service.UserDTO{
 		Username: trimmedUsername,
 	})
 
-	// fmt.Println(strings.Join(util.MapSlice(data.Users, func(user data.User) string { return user.Username }), ", "))
+	fmt.Println(
+		strings.Join(
+			util.MapSlice(
+				h.userService.Users,
+				func(user model.User) string {
+					return user.Username
+				}),
+			", ",
+		),
+	)
+
+	// create access token
+	accessToken, err := lib.CreateJWTToken(&jwt.MapClaims{
+		"sub": newUser.Id,
+	})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	c.SetCookie("accessToken", accessToken, 0, "/", config.CookieDomain, false, true)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Bad Request",
 		"data":    newUser,
 	})
+}
+
+func (h *AuthHandler) Profile(c *gin.Context) {
+
 }

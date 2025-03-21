@@ -1,8 +1,19 @@
 package middleware
 
-import "github.com/gin-gonic/gin"
+import (
+	"fmt"
 
-func CorsMiddleware(c *gin.Context) {
+	"github.com/gin-gonic/gin"
+)
+
+type CorsMiddleware struct{}
+
+func NewCorsMiddleware() *CorsMiddleware {
+	fmt.Println("CorsMiddleware initialized")
+	return &CorsMiddleware{}
+}
+
+func (m *CorsMiddleware) Handler(c *gin.Context) {
 	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 	c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 	c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")

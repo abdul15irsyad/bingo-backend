@@ -1,4 +1,4 @@
-package data
+package model
 
 import (
 	"time"
@@ -11,6 +11,3 @@ type User struct {
 	Username  string    `json:"username"`
 	CreatedAt time.Time `json:"created_at"`
 }
-
-var MaxUser = 20
-var Users = []User{}

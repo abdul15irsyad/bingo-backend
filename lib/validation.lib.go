@@ -1,6 +1,7 @@
-package validation
+package lib
 
 import (
+	"bingo/validation"
 	"reflect"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ var (
 
 func InitValidation() {
 	Validator = validator.New(validator.WithRequiredStructEnabled())
-	Validator.RegisterValidation("username", ValidateUsername)
+	Validator.RegisterValidation("username", validation.ValidateUsername)
 
 	idn := id.New()
 	uni := ut.New(idn, idn)

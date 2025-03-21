@@ -1,31 +1,28 @@
 package main
 
 import (
+	"bingo/config"
+	"bingo/handler"
+	"bingo/lib"
 	"bingo/middleware"
 	"bingo/routes"
-	"bingo/validation"
+	"bingo/service"
 	"fmt"
-	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		fmt.Println(err)
-	}
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "4020"
+	if err := config.InitConfig(); err != nil {
+		panic(err)
 	}
 
-	validation.InitValidation()
+	lib.InitZap()
+	lib.InitValidation()
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
-	r.Use(middleware.CorsMiddleware)
-	routes.InitRoutes(r)
+	Init(r)
 
 	fmt.Println("List of Routes")
 	for _, route := range r.Routes() {
@@ -34,9 +31,32 @@ func main() {
 		fmt.Printf("%s%s%s %s\n", green, route.Method, reset, route.Path)
 	}
 
-	fmt.Println("server running on port:", port)
-	err := r.Run(":" + port)
+	fmt.Println("server running on port:", config.Port)
+	err := r.Run(fmt.Sprintf(":%d", config.Port))
 	if err != nil {
 		panic(err)
 	}
+}
+
+func Init(r *gin.Engine) {
+	// service
+	userService := service.NewUserService(10)
+	// middleware
+	corsMiddleware := middleware.NewCorsMiddleware()
+	jwtMiddleware := middleware.NewJWTMiddleware(userService)
+	// handler
+	authHandler := handler.NewAuthHandler(userService)
+	userHandler := handler.NewUserHandler(userService)
+	// route
+	rootRoute := routes.NewRootRoute()
+	authRoute := routes.NewAuthRoute(authHandler)
+	userRoute := routes.NewUserRoute(userHandler)
+
+	r.Use(corsMiddleware.Handler)
+
+	rootRoute.InitRootRoute(r)
+	authRoute.InitAuthRoute(r)
+	r.Use(jwtMiddleware.Handler)
+	userRoute.InitUserRoute(r)
+
 }
