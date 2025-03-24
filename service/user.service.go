@@ -57,7 +57,7 @@ type GetPaginatedUsersDto struct {
 	Search *string
 }
 
-func (s *UserService) GetPaginatedUsers(dto GetPaginatedUsersDto) ([]model.User, error) {
+func (s *UserService) GetPaginatedUsers(dto GetPaginatedUsersDto) ([]model.User, int64, error) {
 	users := []model.User{}
 	offset := (dto.Page - 1) * dto.Limit
 	query := s.db.Model(&model.User{})
@@ -65,9 +65,15 @@ func (s *UserService) GetPaginatedUsers(dto GetPaginatedUsersDto) ([]model.User,
 		query = query.Where("name ILIKE ? OR email ILIKE ?", "%"+*dto.Search+"%", "%"+*dto.Search+"%")
 	}
 	if err := query.Limit(dto.Limit).Offset(offset).Order("created_at DESC").Find(&users).Error; err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return users, nil
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, count, nil
 }
 
 func (s *UserService) GetUser(id uuid.UUID) (model.User, error) {

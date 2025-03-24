@@ -4,6 +4,7 @@ import (
 	"bingo/dto"
 	"bingo/lib"
 	"bingo/service"
+	"math"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +32,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 		return
 	}
 
-	users, err := h.userService.GetPaginatedUsers(service.GetPaginatedUsersDto{
+	users, count, err := h.userService.GetPaginatedUsers(service.GetPaginatedUsersDto{
 		Page:   getUsersDto.Page,
 		Limit:  getUsersDto.Limit,
 		Search: getUsersDto.Search,
@@ -45,7 +46,11 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "get users",
-		"data":    users,
+		"message": "Get Users",
+		"meta": gin.H{
+			"total_data": count,
+			"total_page": math.Ceil(float64(count) / float64(getUsersDto.Limit)),
+		},
+		"data": users,
 	})
 }

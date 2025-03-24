@@ -8,19 +8,19 @@ func MapSlice[T any, K any](slice []T, mapper func(item T) K) []K {
 	return result
 }
 
-func FindSlice[T any](slice *[]T, predicate func(T) bool) *T {
+func FindSlice[T any](slice *[]T, predicate func(*T) bool) *T {
 	for _, item := range *slice {
-		if predicate(item) {
+		if predicate(&item) {
 			return &item
 		}
 	}
 	return nil
 }
 
-func FilterSlice[T any](slice *[]T, predicate func(T) bool) []T {
+func FilterSlice[T any](slice *[]T, predicate func(*T) bool) []T {
 	var result []T
 	for _, item := range *slice {
-		if predicate(item) {
+		if predicate(&item) {
 			result = append(result, item)
 		}
 	}
