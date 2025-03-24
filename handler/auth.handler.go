@@ -5,7 +5,7 @@ import (
 	"bingo/dto"
 	"bingo/lib"
 	"bingo/service"
-	"fmt"
+	"bingo/util"
 	"net/http"
 	"strings"
 
@@ -21,6 +21,56 @@ type AuthHandler struct {
 func NewAuthHandler(us *service.UserService) *AuthHandler {
 	lib.Logger.Info("NewAuthHandler initialized")
 	return &AuthHandler{us}
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+	var loginDTO dto.LoginDTO
+	c.ShouldBindJSON(&loginDTO)
+	validationErrors := lib.Validate(loginDTO)
+	if len(validationErrors) > 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": "Bad Request",
+			"errors":  validationErrors,
+		})
+		return
+	}
+
+	authUser, err := h.userService.GetUserByUsernameOrEmail(loginDTO.UsernameOrEmail)
+	if err != nil {
+		util.ComparePassword("some password", loginDTO.Password)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "email or password is incorrect",
+		})
+		return
+	}
+
+	correctPassword, err := util.ComparePassword(authUser.Password, loginDTO.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Internal Server Error",
+		})
+		return
+	}
+	if !correctPassword {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Email or password is incorrect",
+		})
+		return
+	}
+
+	// create jwt
+	accessToken, err := lib.CreateJWT(&jwt.MapClaims{
+		"sub": authUser.Id,
+	})
+	if err != nil {
+		return
+	}
+
+	c.SetCookie("access_token", accessToken, 0, "/", config.CookieDomain, false, true)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Login",
+	})
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -68,18 +118,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// create access token
-	accessToken, err := lib.CreateJWTToken(&jwt.MapClaims{
-		"sub": newUser.Id,
-	})
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	c.SetCookie("accessToken", accessToken, 0, "/", config.CookieDomain, false, true)
-
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Bad Request",
+		"message": "Register",
 		"data":    newUser,
 	})
 }

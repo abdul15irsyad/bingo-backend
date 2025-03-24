@@ -86,6 +86,14 @@ func (s *UserService) GetUserByUsername(username string) (model.User, error) {
 	return user, nil
 }
 
+func (s *UserService) GetUserByUsernameOrEmail(usernameOrEmail string) (model.User, error) {
+	var user model.User
+	if err := s.db.Model(&model.User{}).Select("id", "password").Where("username = ? OR email = ?", usernameOrEmail, usernameOrEmail).First(&user).Error; err != nil {
+		return model.User{}, err
+	}
+	return user, nil
+}
+
 type UpdateUserDTO struct {
 	Name     string
 	Username string

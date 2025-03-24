@@ -44,13 +44,13 @@ func InitValidation() {
 		})
 }
 
-func Validate[T any](dtos T) []ValidationError {
+func Validate[T any](dto T) []ValidationError {
 	validationErrors := []ValidationError{}
-	err := Validator.Struct(dtos)
+	err := Validator.Struct(dto)
 	if err != nil {
 		for _, err := range err.(validator.ValidationErrors) {
 			fieldName := err.StructField()
-			field, _ := reflect.TypeOf(dtos).FieldByName(fieldName)
+			field, _ := reflect.TypeOf(dto).FieldByName(fieldName)
 			tagValue := field.Tag.Get("json")
 			if tagValue == "" {
 				tagValue = err.Field()

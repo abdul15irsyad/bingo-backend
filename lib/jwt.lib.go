@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func CreateJWTToken(claims *jwt.MapClaims) (string, error) {
+func CreateJWT(claims *jwt.MapClaims) (string, error) {
 	privateKey, _ := parsePrivateKey(config.JWTPrivateKey)
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(privateKey)
 	if err != nil {
@@ -21,7 +21,7 @@ func CreateJWTToken(claims *jwt.MapClaims) (string, error) {
 	return token, nil
 }
 
-func ParseJWTToken(tokenString string) (claims jwt.MapClaims, err error) {
+func ParseJWT(tokenString string) (claims jwt.MapClaims, err error) {
 	publicKey, _ := parsePublicKey(config.JWTPublicKey)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return publicKey, nil

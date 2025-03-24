@@ -21,7 +21,7 @@ func NewJWTMiddleware(us *service.UserService) *JWTMiddleware {
 }
 
 func (m *JWTMiddleware) Handler(c *gin.Context) {
-	accessToken, err := c.Cookie("accessToken")
+	accessToken, err := c.Cookie("access_token")
 	if err != nil || accessToken == "" {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"message": "invalid credential",
@@ -29,7 +29,7 @@ func (m *JWTMiddleware) Handler(c *gin.Context) {
 		return
 	}
 
-	claims, err := lib.ParseJWTToken(accessToken)
+	claims, err := lib.ParseJWT(accessToken)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
