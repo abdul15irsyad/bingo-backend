@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type JWTMiddleware struct {
@@ -52,10 +53,16 @@ func (m *JWTMiddleware) Handler(c *gin.Context) {
 	// check to database
 	id, _ := claims.GetSubject()
 	userId, _ := uuid.Parse(id)
-	authUser := m.userService.GetUser(userId)
-	if authUser == nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": "invalid credential",
+	authUser, err := m.userService.GetUser(userId)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message": "invalid credential",
+			})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"message": "Internal Server Error",
 		})
 		return
 	}

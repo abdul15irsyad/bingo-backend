@@ -4,7 +4,6 @@ import (
 	"bingo/validation"
 	"reflect"
 
-	"github.com/gin-gonic/gin"
 	"github.com/go-playground/locales/id"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
@@ -45,7 +44,7 @@ func InitValidation() {
 		})
 }
 
-func Validate[T any](c *gin.Context, dtos T) []ValidationError {
+func Validate[T any](dtos T) []ValidationError {
 	validationErrors := []ValidationError{}
 	err := Validator.Struct(dtos)
 	if err != nil {

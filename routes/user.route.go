@@ -19,5 +19,4 @@ func NewUserRoute(uh *handler.UserHandler) *UserRoute {
 func (r *UserRoute) InitUserRoute(router *gin.Engine) {
 	users := router.Group("/users")
 	users.GET("/", r.userHandler.GetUsers)
-	users.GET("/count", r.userHandler.GetCountUser)
 }

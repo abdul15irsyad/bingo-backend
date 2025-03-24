@@ -4,81 +4,112 @@ import (
 	"bingo/lib"
 	"bingo/model"
 	"bingo/util"
-	"slices"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
-var UserMutex sync.Mutex
-
 type UserService struct {
-	MaxUser int
-	Users   []model.User
+	db *gorm.DB
 }
 
-func NewUserService(maxUser int) *UserService {
+func NewUserService(db *gorm.DB) *UserService {
 	lib.Logger.Info("NewUserService initialized")
 	return &UserService{
-		MaxUser: maxUser,
-		Users:   []model.User{},
+		db: db,
 	}
 }
 
-type UserDTO struct {
+type CreateUserDTO struct {
+	Name     string
 	Username string
+	Email    string
+	Password string
 }
 
-func (s *UserService) AddUser(userDTO UserDTO) model.User {
+func (s *UserService) CreateUser(dto CreateUserDTO) (model.User, error) {
 	newUuid, _ := uuid.NewRandom()
+	hashPassword, err := util.HashPassword(dto.Password)
+	if err != nil {
+		return model.User{}, err
+	}
+
 	newUser := model.User{
 		Id:        newUuid,
-		Username:  userDTO.Username,
+		Name:      dto.Name,
+		Username:  dto.Username,
+		Email:     dto.Email,
+		Password:  hashPassword,
 		CreatedAt: time.Now(),
 	}
 
-	UserMutex.Lock()
-	s.Users = append(s.Users, newUser)
-	UserMutex.Unlock()
+	if err := s.db.Model(&model.User{}).Create(newUser).Error; err != nil {
+		return model.User{}, err
+	}
 
-	return newUser
+	return newUser, nil
 }
 
-func (s *UserService) GetUsers() []model.User {
-	sortedUsers := s.Users
-	slices.SortFunc(sortedUsers, func(a, b model.User) int {
-		if a.Username < b.Username {
-			return -1
-		} else {
-			return 1
-		}
-	})
-	return sortedUsers
+type GetPaginatedUsersDto struct {
+	Page   int
+	Limit  int
+	Search *string
 }
 
-func (s *UserService) GetUser(id uuid.UUID) *model.User {
-	user := util.FindSlice(&s.Users, func(user model.User) bool {
-		return user.Id == id
-	})
-	return user
+func (s *UserService) GetPaginatedUsers(dto GetPaginatedUsersDto) ([]model.User, error) {
+	users := []model.User{}
+	offset := (dto.Page - 1) * dto.Limit
+	query := s.db.Model(&model.User{})
+	if dto.Search != nil && *dto.Search != "" {
+		query = query.Where("name ILIKE ? OR email ILIKE ?", "%"+*dto.Search+"%", "%"+*dto.Search+"%")
+	}
+	if err := query.Limit(dto.Limit).Offset(offset).Order("created_at DESC").Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
-func (s *UserService) UpdateUser(id uuid.UUID, userDTO UserDTO) model.User {
-	user := util.FindSlice(&s.Users, func(user model.User) bool {
-		return user.Id != id
-	})
-	UserMutex.Lock()
-	user.Username = userDTO.Username
-	UserMutex.Unlock()
-
-	return *user
+func (s *UserService) GetUser(id uuid.UUID) (model.User, error) {
+	var user model.User
+	if err := s.db.Model(&model.User{}).Where("id = ?", id).First(&user).Error; err != nil {
+		return model.User{}, err
+	}
+	return user, nil
 }
 
-func (s *UserService) DeleteUser(id uuid.UUID) {
-	UserMutex.Lock()
-	s.Users = util.FilterSlice(&s.Users, func(user model.User) bool {
-		return user.Id != id
-	})
-	UserMutex.Unlock()
+func (s *UserService) GetUserByUsername(username string) (model.User, error) {
+	var user model.User
+	if err := s.db.Where("username = ?", username).First(&user).Error; err != nil {
+		return model.User{}, err
+	}
+	return user, nil
+}
+
+type UpdateUserDTO struct {
+	Name     string
+	Username string
+	Email    string
+}
+
+func (s *UserService) UpdateUser(id uuid.UUID, dto UpdateUserDTO) (model.User, error) {
+	var user model.User
+	if err := s.db.Model(&user).Where("id = ?", id).Updates(model.User{
+		Name:      dto.Name,
+		Username:  dto.Username,
+		Email:     dto.Email,
+		UpdatedAt: time.Now(),
+	}).Error; err != nil {
+		return model.User{}, err
+	}
+
+	return user, nil
+}
+
+func (s *UserService) DeleteUser(id uuid.UUID) error {
+	if err := s.db.Delete(&model.User{}).Where("id = ?", id).Error; err != nil {
+		return err
+	}
+
+	return nil
 }

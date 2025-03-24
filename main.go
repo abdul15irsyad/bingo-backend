@@ -39,8 +39,13 @@ func main() {
 }
 
 func Init(r *gin.Engine) {
+	dbManager := lib.NewGormManager()
+	postgresDB, err := dbManager.InitPostgresDB("main", config.DBConfig)
+	if err != nil {
+		panic(err)
+	}
 	// service
-	userService := service.NewUserService(10)
+	userService := service.NewUserService(postgresDB)
 	// middleware
 	corsMiddleware := middleware.NewCorsMiddleware()
 	jwtMiddleware := middleware.NewJWTMiddleware(userService)

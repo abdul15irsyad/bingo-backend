@@ -4,15 +4,14 @@ import (
 	"bingo/config"
 	"bingo/dto"
 	"bingo/lib"
-	"bingo/model"
 	"bingo/service"
-	"bingo/util"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"gorm.io/gorm"
 )
 
 type AuthHandler struct {
@@ -27,7 +26,7 @@ func NewAuthHandler(us *service.UserService) *AuthHandler {
 func (h *AuthHandler) Register(c *gin.Context) {
 	var registerDTO dto.RegisterDTO
 	c.ShouldBindJSON(&registerDTO)
-	validationErrors := lib.Validate(c, registerDTO)
+	validationErrors := lib.Validate(registerDTO)
 	if len(validationErrors) > 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "Bad Request",
@@ -36,19 +35,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	if len(h.userService.Users) >= h.userService.MaxUser {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"message": "Bad Request",
-			"code":    "MAX_USER_EXCEED",
-			"error":   "Max User Exceed",
+	trimmedUsername := strings.TrimSpace(registerDTO.Username)
+	_, err := h.userService.GetUserByUsername(trimmedUsername)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"message": "Internal Server Error",
 		})
 		return
-	}
-
-	trimmedUsername := strings.TrimSpace(registerDTO.Username)
-	if userWithUsernameExist := util.FindSlice(&h.userService.Users, func(user model.User) bool {
-		return util.Slugify(user.Username) == util.Slugify(trimmedUsername)
-	}); userWithUsernameExist != nil {
+	} else if err == nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "Bad Request",
 			"code":    "VALIDATION_ERROR",
@@ -59,23 +53,20 @@ func (h *AuthHandler) Register(c *gin.Context) {
 				},
 			},
 		})
-		return
 	}
 
-	newUser := h.userService.AddUser(service.UserDTO{
+	newUser, err := h.userService.CreateUser(service.CreateUserDTO{
+		Name:     registerDTO.Name,
 		Username: trimmedUsername,
+		Email:    registerDTO.Email,
+		Password: registerDTO.Password,
 	})
-
-	fmt.Println(
-		strings.Join(
-			util.MapSlice(
-				h.userService.Users,
-				func(user model.User) string {
-					return user.Username
-				}),
-			", ",
-		),
-	)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"message": "Internal Server Error",
+		})
+		return
+	}
 
 	// create access token
 	accessToken, err := lib.CreateJWTToken(&jwt.MapClaims{

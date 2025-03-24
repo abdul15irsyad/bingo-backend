@@ -5,12 +5,22 @@ import (
 	"strconv"
 )
 
+type DatabaseConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Database string
+}
+
 var (
 	Port         int
 	CookieDomain string
 
 	JWTPrivateKey string
 	JWTPublicKey  string
+
+	DBConfig DatabaseConfig
 )
 
 func InitAppConfig() error {
@@ -30,6 +40,14 @@ func InitAppConfig() error {
 	publicKey := os.Getenv("JWT_PUBLIC_KEY")
 	JWTPrivateKey = privateKey
 	JWTPublicKey = publicKey
+
+	DBConfig = DatabaseConfig{
+		Host:     os.Getenv("DB_HOST"),
+		Port:     os.Getenv("DB_PORT"),
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASS"),
+		Database: os.Getenv("DB_NAME"),
+	}
 
 	return nil
 }
