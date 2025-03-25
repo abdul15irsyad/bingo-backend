@@ -4,6 +4,7 @@ import (
 	"bingo/lib"
 	"bingo/model"
 	"bingo/service"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -48,7 +49,8 @@ func (h *SocketHandler) StartGameHandler(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	client := h.socketService.CreateClient(conn, authUser.(*model.User))
+	authUserClient := authUser.(model.User)
+	client := h.socketService.CreateClient(conn, &authUserClient)
 
 	conn.SetCloseHandler(func(code int, text string) error {
 		currentTime := time.Now()
@@ -59,4 +61,23 @@ func (h *SocketHandler) StartGameHandler(c *gin.Context) {
 
 	currentTime := time.Now()
 	fmt.Printf("%s: %s connected\n", currentTime.Format("2006-01-02 15:04:05"), client.User.Name)
+
+	for {
+		var JSONMessage map[string]any
+		if err := conn.ReadJSON(&JSONMessage); err != nil {
+			fmt.Println(err)
+			break
+		}
+		switch JSONMessage["type"] {
+		case "message":
+			jsonData, _ := json.Marshal(JSONMessage)
+			var payload service.Message
+			_ = json.Unmarshal(jsonData, &payload)
+			payload.CreatedAt = time.Now()
+			payload.Client = client
+			fmt.Println(payload)
+		default:
+			fmt.Printf("type \"%s\" not found\n", JSONMessage["type"])
+		}
+	}
 }

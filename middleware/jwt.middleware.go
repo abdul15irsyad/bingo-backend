@@ -5,6 +5,7 @@ import (
 	"bingo/service"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -21,13 +22,21 @@ func NewJWTMiddleware(us *service.UserService) *JWTMiddleware {
 }
 
 func (m *JWTMiddleware) Handler(c *gin.Context) {
-	accessToken, err := c.Cookie("access_token")
-	if err != nil || accessToken == "" {
+	// accessToken, err := c.Cookie("access_token")
+	// if err != nil || accessToken == "" {
+	// 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+	// 		"message": "invalid credential",
+	// 	})
+	// 	return
+	// }
+	authorization := c.GetHeader("Authorization")
+	if authorization == "" {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": "invalid credential",
+			"message": "Invalid Credential",
 		})
 		return
 	}
+	accessToken := strings.Split(authorization, " ")[1]
 
 	claims, err := lib.ParseJWT(accessToken)
 	if err != nil {

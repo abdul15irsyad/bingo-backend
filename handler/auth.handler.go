@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bingo/config"
 	"bingo/dto"
 	"bingo/lib"
 	"bingo/service"
@@ -66,10 +65,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("access_token", accessToken, 0, "/", config.CookieDomain, false, true)
-
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login",
+		"data": gin.H{
+			"access_token": accessToken,
+		},
 	})
 }
 
