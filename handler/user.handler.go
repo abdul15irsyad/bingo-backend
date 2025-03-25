@@ -14,9 +14,9 @@ type UserHandler struct {
 	userService *service.UserService
 }
 
-func NewUserHandler(us *service.UserService) *UserHandler {
+func NewUserHandler(userService *service.UserService) *UserHandler {
 	lib.Logger.Info("NewUserHandler initialized")
-	return &UserHandler{us}
+	return &UserHandler{userService}
 }
 
 func (h *UserHandler) GetUsers(c *gin.Context) {

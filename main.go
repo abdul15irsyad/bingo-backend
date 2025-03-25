@@ -45,6 +45,8 @@ func Init(r *gin.Engine) {
 		panic(err)
 	}
 	// service
+	gameService := service.NewGameService()
+	socketService := service.NewSocketService(2)
 	userService := service.NewUserService(postgresDB)
 	// middleware
 	corsMiddleware := middleware.NewCorsMiddleware()
@@ -52,10 +54,12 @@ func Init(r *gin.Engine) {
 	// handler
 	authHandler := handler.NewAuthHandler(userService)
 	userHandler := handler.NewUserHandler(userService)
+	socketHandler := handler.NewSocketHandler(socketService, gameService)
 	// route
 	rootRoute := routes.NewRootRoute()
 	authRoute := routes.NewAuthRoute(authHandler)
 	userRoute := routes.NewUserRoute(userHandler)
+	socketRoute := routes.NewSocketRoute(socketHandler)
 
 	r.Use(corsMiddleware.Handler)
 
@@ -63,5 +67,6 @@ func Init(r *gin.Engine) {
 	authRoute.InitAuthRoute(r)
 	r.Use(jwtMiddleware.Handler)
 	userRoute.InitUserRoute(r)
+	socketRoute.InitSocketRoute(r)
 
 }

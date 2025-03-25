@@ -18,9 +18,9 @@ type AuthHandler struct {
 	userService *service.UserService
 }
 
-func NewAuthHandler(us *service.UserService) *AuthHandler {
+func NewAuthHandler(userService *service.UserService) *AuthHandler {
 	lib.Logger.Info("NewAuthHandler initialized")
-	return &AuthHandler{us}
+	return &AuthHandler{userService}
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {

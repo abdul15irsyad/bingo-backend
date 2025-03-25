@@ -42,6 +42,7 @@ func (s *UserService) CreateUser(dto CreateUserDTO) (model.User, error) {
 		Email:     dto.Email,
 		Password:  hashPassword,
 		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	if err := s.db.Model(&model.User{}).Create(newUser).Error; err != nil {
