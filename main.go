@@ -54,11 +54,13 @@ func Init(r *gin.Engine) {
 	jwtMiddleware := middleware.NewJWTMiddleware(userService)
 	// handler
 	authHandler := handler.NewAuthHandler(userService)
+	profileHandler := handler.NewProfileHandler(userService)
 	userHandler := handler.NewUserHandler(userService)
 	socketHandler := handler.NewSocketHandler(socketService, gameService)
 	// route
 	rootRoute := routes.NewRootRoute()
 	authRoute := routes.NewAuthRoute(authHandler)
+	profileRoute := routes.NewProfileRoute(profileHandler)
 	userRoute := routes.NewUserRoute(userHandler)
 	socketRoute := routes.NewSocketRoute(socketHandler)
 
@@ -67,7 +69,9 @@ func Init(r *gin.Engine) {
 
 	rootRoute.InitRootRoute(r)
 	authRoute.InitAuthRoute(r)
+
 	r.Use(jwtMiddleware.Handler)
+	profileRoute.InitProfileRoute(r)
 	userRoute.InitUserRoute(r)
 	socketRoute.InitSocketRoute(r)
 

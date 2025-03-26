@@ -5,6 +5,7 @@ import (
 	"bingo/lib"
 	"bingo/service"
 	"bingo/util"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -22,7 +23,29 @@ func NewAuthHandler(userService *service.UserService) *AuthHandler {
 }
 
 func (h *AuthHandler) GuestLogin(c *gin.Context) {
+	randomString, _ := util.RandomString(10, nil)
+	randomName := fmt.Sprintf("Guest %s", randomString)
+	newUser, err := h.userService.CreateUser(service.CreateUserDTO{
+		Name: randomName,
+	})
+	if err != nil {
+		c.Error(err)
+		return
+	}
 
+	// create jwt
+	accessToken, err := lib.CreateJWT(newUser.Id.String())
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Guest Login",
+		"data": gin.H{
+			"access_token": accessToken,
+		},
+	})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -46,7 +69,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	correctPassword, err := util.ComparePassword(authUser.Password, loginDTO.Password)
+	correctPassword, err := util.ComparePassword(*authUser.Password, loginDTO.Password)
 	if err != nil {
 		c.Error(err)
 		return
@@ -105,9 +128,9 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	newUser, err := h.userService.CreateUser(service.CreateUserDTO{
 		Name:     registerDTO.Name,
-		Username: trimmedUsername,
-		Email:    registerDTO.Email,
-		Password: registerDTO.Password,
+		Username: &trimmedUsername,
+		Email:    &registerDTO.Email,
+		Password: &registerDTO.Password,
 	})
 	if err != nil {
 		c.Error(err)
@@ -118,8 +141,4 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		"message": "Register",
 		"data":    newUser,
 	})
-}
-
-func (h *AuthHandler) Profile(c *gin.Context) {
-
 }

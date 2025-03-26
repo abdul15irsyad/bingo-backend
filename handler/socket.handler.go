@@ -73,10 +73,10 @@ func (h *SocketHandler) GameHandler(c *gin.Context) {
 	fmt.Printf("%s: %s connected\n", currentTime.Format("2006-01-02 15:04:05"), client.User.Name)
 
 	h.socketService.Mutex.Lock()
-	readyOpponents := util.FilterSlice(&h.socketService.Queues, func(queue *model.Queue) bool {
-		return queue.GameTotalPlayer == totalPlayer
+	players := util.FilterSlice(&h.socketService.Queues, func(queue *model.Queue) bool {
+		return queue.GameTotalPlayer == totalPlayer && queue.Client.User.Id != client.User.Id
 	})
-	if len(readyOpponents)+1 < totalPlayer {
+	if len(players)+1 < totalPlayer {
 		// add to queue
 		newUuid, _ := uuid.NewRandom()
 		h.socketService.Queues = append(h.socketService.Queues, model.Queue{
@@ -87,9 +87,6 @@ func (h *SocketHandler) GameHandler(c *gin.Context) {
 		})
 	} else {
 		// start game
-		players := util.FilterSlice(&h.socketService.Queues, func(queue *model.Queue) bool {
-			return queue.GameTotalPlayer == totalPlayer && queue.Client.User.Id != client.User.Id
-		})
 		newUuid, _ := uuid.NewRandom()
 		players = append(players, model.Queue{
 			Id:              newUuid,
@@ -97,6 +94,7 @@ func (h *SocketHandler) GameHandler(c *gin.Context) {
 			Client:          client,
 			CreatedAt:       time.Now(),
 		})
+		// remove from queue
 		h.socketService.Queues = util.FilterSlice(&h.socketService.Queues, func(queue *model.Queue) bool {
 			return queue.GameTotalPlayer != totalPlayer && queue.Client.User.Id != client.User.Id
 		})

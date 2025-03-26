@@ -18,6 +18,7 @@ func NewAuthRoute(ah *handler.AuthHandler) *AuthRoute {
 
 func (r *AuthRoute) InitAuthRoute(router *gin.Engine) {
 	auth := router.Group("/auth")
+	auth.POST("/guest-login", r.authHandler.GuestLogin)
 	auth.POST("/login", r.authHandler.Login)
 	auth.POST("/register", r.authHandler.Register)
 }

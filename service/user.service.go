@@ -23,16 +23,20 @@ func NewUserService(db *gorm.DB) *UserService {
 
 type CreateUserDTO struct {
 	Name     string
-	Username string
-	Email    string
-	Password string
+	Username *string
+	Email    *string
+	Password *string
 }
 
 func (s *UserService) CreateUser(dto CreateUserDTO) (model.User, error) {
 	newUuid, _ := uuid.NewRandom()
-	hashPassword, err := util.HashPassword(dto.Password)
-	if err != nil {
-		return model.User{}, err
+	var password *string = nil
+	if dto.Password != nil {
+		hashPassword, err := util.HashPassword(*dto.Password)
+		if err != nil {
+			return model.User{}, err
+		}
+		password = &hashPassword
 	}
 
 	newUser := model.User{
@@ -40,7 +44,7 @@ func (s *UserService) CreateUser(dto CreateUserDTO) (model.User, error) {
 		Name:      dto.Name,
 		Username:  dto.Username,
 		Email:     dto.Email,
-		Password:  hashPassword,
+		Password:  password,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -95,7 +99,7 @@ func (s *UserService) GetUserByUsername(username string) (model.User, error) {
 
 func (s *UserService) GetUserByUsernameOrEmail(usernameOrEmail string) (model.User, error) {
 	var user model.User
-	if err := s.db.Model(&model.User{}).Select("id", "password").Where("username = ? OR email = ?", usernameOrEmail, usernameOrEmail).First(&user).Error; err != nil {
+	if err := s.db.Model(&model.User{}).Select("id", "password").Where("(username = ? OR email = ?) AND password NOT NULL", usernameOrEmail, usernameOrEmail).First(&user).Error; err != nil {
 		return model.User{}, err
 	}
 	return user, nil
@@ -111,8 +115,8 @@ func (s *UserService) UpdateUser(id uuid.UUID, dto UpdateUserDTO) (model.User, e
 	var user model.User
 	if err := s.db.Model(&user).Where("id = ?", id).Updates(model.User{
 		Name:      dto.Name,
-		Username:  dto.Username,
-		Email:     dto.Email,
+		Username:  &dto.Username,
+		Email:     &dto.Email,
 		UpdatedAt: time.Now(),
 	}).Error; err != nil {
 		return model.User{}, err

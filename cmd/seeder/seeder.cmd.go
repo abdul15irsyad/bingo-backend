@@ -61,13 +61,15 @@ func userSeeder(db *gorm.DB) {
 	newUuid, _ := uuid.Parse("0e3cec4a-206c-4dfb-96f6-3f6b85db9543")
 	hashedPassword, _ := util.HashPassword("Qwerty123")
 	randomDate := util.RandomDate(time.Now().AddDate(0, 0, -1), time.Now())
+	username := "irsyadabdul"
+	email := "abdulirsyad@email.com"
 	user := model.User{
 		Id:              newUuid,
 		Name:            "Irsyad Abdul",
-		Username:        "irsyadabdul",
-		Email:           "abdulirsyad@email.com",
+		Username:        &username,
+		Email:           &email,
 		EmailVerifiedAt: &randomDate,
-		Password:        hashedPassword,
+		Password:        &hashedPassword,
 		CreatedAt:       randomDate,
 		UpdatedAt:       randomDate,
 	}
@@ -79,13 +81,14 @@ func userSeeder(db *gorm.DB) {
 		name, _ := faker.GetPerson().Name(reflect.Value{})
 		nameSlug := util.Slugify(name.(string))
 		randomDate := util.RandomDate(time.Now().AddDate(0, 0, -1), time.Now())
+		email := strings.ReplaceAll(nameSlug, "-", "") + "@email.com"
 		user := model.User{
 			Id:              randomUuid,
 			Name:            name.(string),
-			Username:        nameSlug,
-			Email:           strings.ReplaceAll(nameSlug, "-", "") + "@email.com",
+			Username:        &nameSlug,
+			Email:           &email,
 			EmailVerifiedAt: nil,
-			Password:        hashedPassword,
+			Password:        &hashedPassword,
 			CreatedAt:       randomDate,
 			UpdatedAt:       randomDate,
 		}
