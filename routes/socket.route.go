@@ -18,5 +18,5 @@ func NewSocketRoute(socketHandler *handler.SocketHandler) *SocketRoute {
 
 func (r *SocketRoute) InitSocketRoute(router *gin.Engine) {
 	socket := router.Group("/socket")
-	socket.GET("/start-game", r.socketHandler.StartGameHandler)
+	socket.GET("/game", r.socketHandler.GameHandler)
 }

@@ -39,7 +39,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	authUser, err := h.userService.GetUserByUsernameOrEmail(loginDTO.UsernameOrEmail)
 	if err != nil {
-		util.ComparePassword("some password", loginDTO.Password)
+		// util.ComparePassword("some password", loginDTO.Password)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "email or password is incorrect",
 		})
@@ -61,6 +61,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// create jwt
 	accessToken, err := lib.CreateJWT(authUser.Id.String())
 	if err != nil {
+		c.Error(err)
 		return
 	}
 

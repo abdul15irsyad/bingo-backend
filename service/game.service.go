@@ -21,8 +21,8 @@ func NewGameService() *GameService {
 }
 
 type CreateGameDTO struct {
-	Type  string
-	Users []model.User
+	TotalPlayer int
+	Users       []model.User
 }
 
 func (s *GameService) CreateGame(dto CreateGameDTO) (model.Game, error) {
@@ -45,12 +45,12 @@ func (s *GameService) CreateGame(dto CreateGameDTO) (model.Game, error) {
 	}
 
 	newGame := model.Game{
-		Id:        newUuid,
-		Code:      newCode,
-		Type:      dto.Type,
-		Users:     dto.Users,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Id:          newUuid,
+		Code:        newCode,
+		TotalPlayer: dto.TotalPlayer,
+		Users:       dto.Users,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 		GameTiles: util.MapSlice(dto.Users, func(u model.User) model.GameTile {
 			newUuid, _ := uuid.NewRandom()
 			return model.GameTile{

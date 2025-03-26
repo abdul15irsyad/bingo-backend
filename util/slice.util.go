@@ -26,3 +26,29 @@ func FilterSlice[T any](slice *[]T, predicate func(*T) bool) []T {
 	}
 	return result
 }
+
+func UniqueSlice[T any, R comparable](slice *[]T, predicate func(*T) R) []T {
+	exists := []R{}
+	result := []T{}
+	for _, item := range *slice {
+		value := predicate(&item)
+		if exist := FindSlice(&exists, func(r *R) bool {
+			return *r == value
+		}); exist == nil {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func ReduceSlice[T any, U any](
+	slice *[]T,
+	reducer func(prev U, curr T) U,
+	initial U,
+) U {
+	accumulator := initial
+	for _, v := range *slice {
+		accumulator = reducer(accumulator, v)
+	}
+	return accumulator
+}
