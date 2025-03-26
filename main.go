@@ -50,6 +50,7 @@ func Init(r *gin.Engine) {
 	userService := service.NewUserService(postgresDB)
 	// middleware
 	corsMiddleware := middleware.NewCorsMiddleware()
+	errorMiddleware := middleware.NewErrorMiddleware()
 	jwtMiddleware := middleware.NewJWTMiddleware(userService)
 	// handler
 	authHandler := handler.NewAuthHandler(userService)
@@ -61,6 +62,7 @@ func Init(r *gin.Engine) {
 	userRoute := routes.NewUserRoute(userHandler)
 	socketRoute := routes.NewSocketRoute(socketHandler)
 
+	r.Use(errorMiddleware.Handler)
 	r.Use(corsMiddleware.Handler)
 
 	rootRoute.InitRootRoute(r)

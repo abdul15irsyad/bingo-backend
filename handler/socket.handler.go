@@ -42,9 +42,7 @@ func (h *SocketHandler) StartGameHandler(c *gin.Context) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"message": "Internal Server Error",
-		})
+		c.Error(err)
 		return
 	}
 	defer conn.Close()
@@ -75,7 +73,7 @@ func (h *SocketHandler) StartGameHandler(c *gin.Context) {
 			_ = json.Unmarshal(jsonData, &payload)
 			payload.CreatedAt = time.Now()
 			payload.Client = client
-			fmt.Println(payload)
+			fmt.Println(*payload.Client.User)
 		default:
 			fmt.Printf("type \"%s\" not found\n", JSONMessage["type"])
 		}

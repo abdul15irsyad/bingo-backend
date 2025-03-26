@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
@@ -20,6 +19,10 @@ type AuthHandler struct {
 func NewAuthHandler(userService *service.UserService) *AuthHandler {
 	lib.Logger.Info("NewAuthHandler initialized")
 	return &AuthHandler{userService}
+}
+
+func (h *AuthHandler) GuestLogin(c *gin.Context) {
+
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -45,9 +48,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	correctPassword, err := util.ComparePassword(authUser.Password, loginDTO.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Internal Server Error",
-		})
+		c.Error(err)
 		return
 	}
 	if !correctPassword {
@@ -58,9 +59,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// create jwt
-	accessToken, err := lib.CreateJWT(&jwt.MapClaims{
-		"sub": authUser.Id,
-	})
+	accessToken, err := lib.CreateJWT(authUser.Id.String())
 	if err != nil {
 		return
 	}
@@ -88,9 +87,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	trimmedUsername := strings.TrimSpace(registerDTO.Username)
 	_, err := h.userService.GetUserByUsername(trimmedUsername)
 	if err != nil && err != gorm.ErrRecordNotFound {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"message": "Internal Server Error",
-		})
+		c.Error(err)
 		return
 	} else if err == nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
@@ -112,9 +109,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Password: registerDTO.Password,
 	})
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"message": "Internal Server Error",
-		})
+		c.Error(err)
 		return
 	}
 

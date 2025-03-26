@@ -39,9 +39,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Internal Server Error",
-		})
+		c.Error(err)
 		return
 	}
 

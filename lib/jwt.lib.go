@@ -8,12 +8,18 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func CreateJWT(claims *jwt.MapClaims) (string, error) {
+func CreateJWT(sub string) (string, error) {
 	privateKey, _ := parsePrivateKey(config.JWTPrivateKey)
+	claims := jwt.RegisteredClaims{
+		Subject:   sub,
+		ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(5 * time.Hour)},
+		IssuedAt:  &jwt.NumericDate{Time: time.Now()},
+	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(privateKey)
 	if err != nil {
 		return "", err
@@ -21,25 +27,30 @@ func CreateJWT(claims *jwt.MapClaims) (string, error) {
 	return token, nil
 }
 
-func ParseJWT(tokenString string) (claims jwt.MapClaims, err error) {
+func ParseJWT(tokenString string) (sub string, err error) {
 	publicKey, _ := parsePublicKey(config.JWTPublicKey)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return publicKey, nil
 	})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if !token.Valid {
-		return nil, err
+		return "", err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, errors.New("failed to parse claims")
+		return "", errors.New("failed to parse claims")
 	}
 
-	return claims, nil
+	sub, err = claims.GetSubject()
+	if err != nil {
+		return "", err
+	}
+
+	return sub, nil
 }
 
 func parsePrivateKey(privateKeyString string) (*rsa.PrivateKey, error) {

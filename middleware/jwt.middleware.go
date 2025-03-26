@@ -25,7 +25,7 @@ func (m *JWTMiddleware) Handler(c *gin.Context) {
 	// accessToken, err := c.Cookie("access_token")
 	// if err != nil || accessToken == "" {
 	// 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-	// 		"message": "invalid credential",
+	// 		"message": "Invalid Credential",
 	// 	})
 	// 	return
 	// }
@@ -38,7 +38,7 @@ func (m *JWTMiddleware) Handler(c *gin.Context) {
 	}
 	accessToken := strings.Split(authorization, " ")[1]
 
-	claims, err := lib.ParseJWT(accessToken)
+	sub, err := lib.ParseJWT(accessToken)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -49,30 +49,33 @@ func (m *JWTMiddleware) Handler(c *gin.Context) {
 		}
 		if errors.Is(err, jwt.ErrSignatureInvalid) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"message": "invalid credential",
+				"message": "Invalid Credential",
 			})
 			return
 		}
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": err.Error(),
+			"message": "Invalid Credential",
 		})
 		return
 	}
 
 	// check to database
-	id, _ := claims.GetSubject()
-	userId, _ := uuid.Parse(id)
+	userId, err := uuid.Parse(sub)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"message": "Invalid Credential",
+		})
+		return
+	}
 	authUser, err := m.userService.GetUser(userId)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"message": "invalid credential",
+				"message": "Invalid Credential",
 			})
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"message": "Internal Server Error",
-		})
+		c.Error(err)
 		return
 	}
 
