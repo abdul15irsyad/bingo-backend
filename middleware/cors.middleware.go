@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"fmt"
+	"bingo/lib"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,7 +9,7 @@ import (
 type CorsMiddleware struct{}
 
 func NewCorsMiddleware() *CorsMiddleware {
-	fmt.Println("CorsMiddleware initialized")
+	lib.Logger.Info("CorsMiddleware initialized")
 	return &CorsMiddleware{}
 }
 

@@ -23,9 +23,15 @@ type (
 		// WinnerId  *uuid.UUID `json:"winner_id" gorm:"column:winner_id;type:varchar(40)"`
 
 		Winner      *User        `json:"winner"`
-		Users       []User       `json:"users"`
+		Players     *[]Player    `json:"users"`
 		GameTiles   []GameTile   `json:"game_tiles"`
 		MarkedTiles []MarkedTile `json:"marked_tiles"`
+	}
+
+	Player struct {
+		Id     uuid.UUID
+		User   User
+		Status bool
 	}
 
 	GameTile struct {

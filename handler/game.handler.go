@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -52,7 +53,6 @@ func (h *GameHandler) Start(c *gin.Context) {
 		return
 	}
 	totalPlayer := startDTO.TotalPlayer
-	fmt.Println("totalPlayer", totalPlayer)
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -86,14 +86,36 @@ func (h *GameHandler) Start(c *gin.Context) {
 		}
 		jsonData, _ := json.Marshal(JSONMessage)
 		switch JSONMessage["type"] {
-		case model.GameReadyType:
+		case model.PlayerReadyType:
+			var gameReady model.Payload
+			_ = json.Unmarshal(jsonData, &gameReady)
+			gameId, _ := uuid.Parse(gameReady.Content.(string))
+			game := h.gameService.GetGame(gameId)
+			if game == nil {
+				c.Error(fmt.Errorf("game %s not found", gameId.String()))
+				continue
+			}
+			player := h.gameService.GetPlayerFromUserId(game, client.User.Id)
 
+			isAllReady := h.gameService.PlayerReady(game.Id, player.Id)
+			if isAllReady {
+				room := h.socketService.GetRoomFromGame(game.Id)
+				err := h.socketService.BroadcastToRoom(room, model.Payload{
+					Type:      model.GameStartType,
+					Content:   nil,
+					CreatedAt: time.Now(),
+				})
+				if err != nil {
+					c.Error(err)
+					return
+				}
+			}
 		case model.MessageType:
-			var payload model.Message
-			_ = json.Unmarshal(jsonData, &payload)
-			payload.CreatedAt = time.Now()
-			payload.User = client.User
-			fmt.Println(*payload.User)
+			var message model.Payload
+			_ = json.Unmarshal(jsonData, &message)
+			message.CreatedAt = time.Now()
+			message.User = client.User
+			h.socketService.Broadcast(message)
 		default:
 			fmt.Printf("type \"%s\" not found\n", JSONMessage["type"])
 		}

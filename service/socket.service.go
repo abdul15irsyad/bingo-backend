@@ -13,7 +13,7 @@ import (
 type SocketService struct {
 	Clients []model.Client
 	Queues  []model.Queue
-	Rooms   []model.Room
+	Rooms   []*model.Room
 	MaxRoom int
 	Mutex   sync.RWMutex
 }
@@ -22,7 +22,7 @@ func NewSocketService(maxRoom int) *SocketService {
 	return &SocketService{
 		Clients: []model.Client{},
 		Queues:  []model.Queue{},
-		Rooms:   []model.Room{},
+		Rooms:   []*model.Room{},
 		MaxRoom: maxRoom,
 	}
 }
@@ -42,7 +42,7 @@ func (s *SocketService) RemoveClient(client *model.Client) {
 	})
 }
 
-func (s *SocketService) SendMessage(client *model.Client, message *model.Message) error {
+func (s *SocketService) SendMessage(client *model.Client, message *model.Payload) error {
 	err := client.Conn.WriteJSON(*message)
 	if err != nil {
 		return err
@@ -53,11 +53,15 @@ func (s *SocketService) SendMessage(client *model.Client, message *model.Message
 
 func (s *SocketService) CreateRoom(game *model.Game) *model.Room {
 	id, _ := uuid.NewRandom()
-	return &model.Room{
+	newRoom := &model.Room{
 		Id:      id,
 		Clients: []model.Client{},
 		Game:    game,
 	}
+
+	s.Rooms = append(s.Rooms, newRoom)
+
+	return newRoom
 }
 
 func (s *SocketService) AddClientToRoom(room *model.Room, client *model.Client) {
@@ -77,13 +81,13 @@ func (s *SocketService) RemoveClientFromRoom(room *model.Room, client *model.Cli
 	room.Mutex.Unlock()
 
 	if len(room.Clients) == 0 {
-		s.Rooms = util.FilterSlice(&s.Rooms, func(r *model.Room) bool {
-			return r.Id != room.Id
+		s.Rooms = util.FilterSlice(&s.Rooms, func(r **model.Room) bool {
+			return (*r).Id != room.Id
 		})
 	}
 }
 
-func (s *SocketService) Broadcast(message model.Message) error {
+func (s *SocketService) Broadcast(message model.Payload) error {
 	for _, client := range s.Clients {
 		err := s.SendMessage(&client, &message)
 		if err != nil {
@@ -95,7 +99,15 @@ func (s *SocketService) Broadcast(message model.Message) error {
 	return nil
 }
 
-func (s *SocketService) BroadcastToRoom(room *model.Room, message model.Message) error {
+func (s *SocketService) GetRoomFromGame(gameId uuid.UUID) *model.Room {
+	room := util.FindSlice(&s.Rooms, func(room **model.Room) bool {
+		return (*room).Game.Id == gameId
+	})
+
+	return *room
+}
+
+func (s *SocketService) BroadcastToRoom(room *model.Room, message model.Payload) error {
 	room.Mutex.RLock()
 	defer room.Mutex.RUnlock()
 

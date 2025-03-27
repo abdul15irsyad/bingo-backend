@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	GameMatchType = "game match"
-	GameReadyType = "game ready"
-	MessageType   = "message"
+	GameMatchType   = "game match"
+	PlayerReadyType = "player ready"
+	GameStartType   = "game start"
+	MessageType     = "message"
 )
 
 type (
@@ -29,10 +30,10 @@ type (
 		Mutex   sync.RWMutex
 	}
 
-	Message struct {
+	Payload struct {
 		Type      string    `json:"type"`
 		User      *User     `json:"user"`
-		Content   *string   `json:"content"`
+		Content   any       `json:"content"`
 		CreatedAt time.Time `json:"created_at"`
 	}
 
@@ -43,7 +44,7 @@ type (
 
 	BroadcastRoom struct {
 		Room    *Room
-		Message Message
+		Message Payload
 	}
 
 	AddClientToRoom struct {

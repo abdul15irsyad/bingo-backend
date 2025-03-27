@@ -1,8 +1,8 @@
 package util
 
-func MapSlice[T any, K any](slice []T, mapper func(item T) K) []K {
-	result := make([]K, len(slice))
-	for i, value := range slice {
+func MapSlice[T any, K any](slice *[]T, mapper func(item T) K) []K {
+	result := make([]K, len(*slice))
+	for i, value := range *slice {
 		result[i] = mapper(value)
 	}
 	return result
