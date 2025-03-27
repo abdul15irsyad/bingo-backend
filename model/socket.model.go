@@ -8,6 +8,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const (
+	GameMatchType = "game match"
+	GameReadyType = "game ready"
+	MessageType   = "message"
+)
+
 type (
 	Client struct {
 		Id   uuid.UUID `json:"id"`
@@ -23,18 +29,16 @@ type (
 		Mutex   sync.RWMutex
 	}
 
-	Queue struct {
-		Id              uuid.UUID `json:"id"`
-		GameTotalPlayer int       `json:"game_type"`
-		Client          *Client   `json:"client"`
-		CreatedAt       time.Time `json:"created_at"`
-	}
-
 	Message struct {
 		Type      string    `json:"type"`
 		User      *User     `json:"user"`
-		Content   string    `json:"content"`
+		Content   *string   `json:"content"`
 		CreatedAt time.Time `json:"created_at"`
+	}
+
+	MoveContent struct {
+		Number int   `json:"number"`
+		User   *User `json:""`
 	}
 
 	BroadcastRoom struct {

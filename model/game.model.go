@@ -7,12 +7,19 @@ import (
 )
 
 type (
+	Queue struct {
+		Id              uuid.UUID `json:"id"`
+		GameTotalPlayer int       `json:"game_type"`
+		Client          *Client   `json:"client"`
+		CreatedAt       time.Time `json:"created_at"`
+	}
 	Game struct {
 		Id          uuid.UUID `json:"id" gorm:"column:id;type:varchar(40);primaryKey"`
 		Code        string    `json:"code" gorm:"column:code;type:varchar(40);not null"`
 		TotalPlayer int       `json:"total_player" gorm:"column:total_player;type:int;not null"`
 		CreatedAt   time.Time `json:"created_at" gorm:"column:created_at;type:timestamptz"`
 		UpdatedAt   time.Time `json:"updated_at" gorm:"column:updated_at;type:timestamptz"`
+		Turn        string    `json:"turn"`
 		// WinnerId  *uuid.UUID `json:"winner_id" gorm:"column:winner_id;type:varchar(40)"`
 
 		Winner      *User        `json:"winner"`

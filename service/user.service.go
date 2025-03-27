@@ -99,7 +99,7 @@ func (s *UserService) GetUserByUsername(username string) (model.User, error) {
 
 func (s *UserService) GetUserByUsernameOrEmail(usernameOrEmail string) (model.User, error) {
 	var user model.User
-	if err := s.db.Model(&model.User{}).Select("id", "password").Where("(username = ? OR email = ?) AND password NOT NULL", usernameOrEmail, usernameOrEmail).First(&user).Error; err != nil {
+	if err := s.db.Model(&model.User{}).Select("id", "password").Where("(username = ? OR email = ?) AND password IS NOT NULL", usernameOrEmail, usernameOrEmail).First(&user).Error; err != nil {
 		return model.User{}, err
 	}
 	return user, nil

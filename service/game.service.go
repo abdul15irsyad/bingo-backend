@@ -11,18 +11,76 @@ import (
 )
 
 type GameService struct {
-	Games []model.Game
-	Mutex sync.RWMutex
+	Games         []model.Game
+	Mutex         sync.RWMutex
+	socketService *SocketService
 }
 
-func NewGameService() *GameService {
+func NewGameService(socketService *SocketService) *GameService {
 	lib.Logger.Info("NewGameService initialized")
-	return &GameService{[]model.Game{}, sync.RWMutex{}}
+	return &GameService{[]model.Game{}, sync.RWMutex{}, socketService}
 }
 
 type CreateGameDTO struct {
 	TotalPlayer int
 	Users       []model.User
+}
+
+func (s *GameService) QueuePlayer(client *model.Client, totalPlayer int) error {
+	s.socketService.Mutex.Lock()
+	players := util.FilterSlice(&s.socketService.Queues, func(queue *model.Queue) bool {
+		return queue.GameTotalPlayer == totalPlayer && queue.Client.User.Id != client.User.Id
+	})
+	if len(players)+1 < totalPlayer {
+		// add to queue
+		newUuid, _ := uuid.NewRandom()
+		s.socketService.Queues = append(s.socketService.Queues, model.Queue{
+			Id:              newUuid,
+			GameTotalPlayer: totalPlayer,
+			Client:          client,
+			CreatedAt:       time.Now(),
+		})
+	} else {
+		// start game
+		newUuid, _ := uuid.NewRandom()
+		players = append(players, model.Queue{
+			Id:              newUuid,
+			GameTotalPlayer: totalPlayer,
+			Client:          client,
+			CreatedAt:       time.Now(),
+		})
+		// remove from queue
+		s.socketService.Queues = util.FilterSlice(&s.socketService.Queues, func(queue *model.Queue) bool {
+			return queue.GameTotalPlayer != totalPlayer && queue.Client.User.Id != client.User.Id
+		})
+
+		game, err := s.CreateGame(CreateGameDTO{
+			TotalPlayer: totalPlayer,
+			Users: util.MapSlice(players, func(player model.Queue) model.User {
+				return *player.Client.User
+			}),
+		})
+		if err != nil {
+			return err
+		}
+
+		room := s.socketService.CreateRoom(&game)
+		room.Clients = util.MapSlice(players, func(queue model.Queue) model.Client {
+			return *queue.Client
+		})
+
+		err = s.socketService.BroadcastToRoom(room, model.Message{
+			Type:      model.GameMatchType,
+			Content:   nil,
+			CreatedAt: time.Now(),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	s.socketService.Mutex.Unlock()
+
+	return nil
 }
 
 func (s *GameService) CreateGame(dto CreateGameDTO) (model.Game, error) {
