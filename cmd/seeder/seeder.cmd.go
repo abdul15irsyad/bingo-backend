@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bingo/cmd/seeder/seeders"
 	"bingo/config"
 	"bingo/lib"
 	"bingo/model"
@@ -26,7 +27,7 @@ func main() {
 		name string
 		seed func(*gorm.DB)
 	}{
-		{name: "userSeeder", seed: userSeeder},
+		{name: "userSeeder", seed: seeders.UserSeeder},
 	} {
 		// check name in seeders table
 		result := db.Model(&model.Seeder{}).Where("name = ?", seeder.name).First(&seeder)

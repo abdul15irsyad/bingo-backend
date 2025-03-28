@@ -1,4 +1,4 @@
-package main
+package seeders
 
 import (
 	"bingo/model"
@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func userSeeder(db *gorm.DB) {
+func UserSeeder(db *gorm.DB) {
 	users := []model.User{
 		newUser("Luffy"),
 		newUser("Zoro"),
