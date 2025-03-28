@@ -66,7 +66,7 @@ func (s *GameService) CreateGame(dto CreateGameDTO) (model.Game, error) {
 			newUuid, _ := uuid.NewRandom()
 			return &model.GameTile{
 				Id:    newUuid,
-				Tiles: CreateTiles(),
+				Tiles: createTiles(),
 			}
 		}),
 		MarkedTiles: []model.MarkedTile{},
@@ -174,16 +174,13 @@ func (s *GameService) QueuePlayer(client *model.Client, totalPlayer int) error {
 	return nil
 }
 
-func (s *GameService) PlayerReady(game *model.Game, player *model.Player) (isAllReady bool) {
-	isAllReady = false
-	player.Status = true
-
+func (s *GameService) CheckIsAllReady(game *model.Game) (isAllReady bool) {
 	return util.FindSlice(&game.Players, func(p **model.Player) bool {
 		return !(*p).Status
 	}) == nil
 }
 
-func CreateTiles() []*model.Tile {
+func createTiles() []*model.Tile {
 	var tiles []*model.Tile
 	size := 5
 	for y := range size {
@@ -202,7 +199,7 @@ func CreateTiles() []*model.Tile {
 	return tiles
 }
 
-func MarkTile(number int, game *model.Game) {
+func (s *GameService) MarkTile(game *model.Game, number int) {
 	for i := range game.GameTiles {
 		for j := range game.GameTiles[i].Tiles {
 			if game.GameTiles[i].Tiles[j].Number == number {

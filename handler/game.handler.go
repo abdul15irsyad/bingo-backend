@@ -96,8 +96,9 @@ func (h *GameHandler) Start(c *gin.Context) {
 				continue
 			}
 			player := h.gameService.GetPlayerFromUserId(game, client.User.Id)
+			player.Status = true
 
-			isAllReady := h.gameService.PlayerReady(game, player)
+			isAllReady := h.gameService.CheckIsAllReady(game)
 			if isAllReady {
 				room := h.socketService.GetRoomFromGame(game.Id)
 				err := h.socketService.BroadcastToRoom(room, model.Payload{
