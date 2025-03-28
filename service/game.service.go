@@ -11,19 +11,19 @@ import (
 )
 
 type GameService struct {
-	Games         []model.Game
+	Games         []*model.Game
 	Mutex         sync.RWMutex
 	socketService *SocketService
 }
 
 func NewGameService(socketService *SocketService) *GameService {
 	lib.Logger.Info("NewGameService initialized")
-	return &GameService{[]model.Game{}, sync.RWMutex{}, socketService}
+	return &GameService{[]*model.Game{}, sync.RWMutex{}, socketService}
 }
 
 type CreateGameDTO struct {
 	TotalPlayer int
-	Users       []model.User
+	Users       []*model.User
 }
 
 // Game
@@ -38,17 +38,17 @@ func (s *GameService) CreateGame(dto CreateGameDTO) (model.Game, error) {
 		if err != nil {
 			return model.Game{}, err
 		}
-		if util.FindSlice(&s.Games, func(g *model.Game) bool {
-			return g.Code == randomString
+		if util.FindSlice(&s.Games, func(g **model.Game) bool {
+			return (*g).Code == randomString
 		}) == nil {
 			newCode = randomString
 			break
 		}
 	}
 
-	players := util.MapSlice(&dto.Users, func(user model.User) model.Player {
+	players := util.MapSlice(&dto.Users, func(user *model.User) *model.Player {
 		newUuid, _ := uuid.NewRandom()
-		return model.Player{
+		return &model.Player{
 			Id:     newUuid,
 			User:   user,
 			Status: false,
@@ -59,12 +59,12 @@ func (s *GameService) CreateGame(dto CreateGameDTO) (model.Game, error) {
 		Id:          newUuid,
 		Code:        newCode,
 		TotalPlayer: dto.TotalPlayer,
-		Players:     &players,
+		Players:     players,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
-		GameTiles: util.MapSlice(&dto.Users, func(u model.User) model.GameTile {
+		GameTiles: util.MapSlice(&dto.Users, func(u *model.User) *model.GameTile {
 			newUuid, _ := uuid.NewRandom()
-			return model.GameTile{
+			return &model.GameTile{
 				Id:    newUuid,
 				Tiles: CreateTiles(),
 			}
@@ -76,33 +76,55 @@ func (s *GameService) CreateGame(dto CreateGameDTO) (model.Game, error) {
 }
 
 func (s *GameService) GetGame(id uuid.UUID) *model.Game {
-	return util.FindSlice(&s.Games, func(g *model.Game) bool {
-		return g.Id == id
+	return *util.FindSlice(&s.Games, func(g **model.Game) bool {
+		return (*g).Id == id
 	})
+}
+
+type UpdateGameDTO struct {
+	Turn    *string
+	StartAt *time.Time
+	Winner  *model.User
+}
+
+func (s *GameService) UpdateGame(id uuid.UUID, updateGameDTO UpdateGameDTO) *model.Game {
+	var updatedGame *model.Game
+	s.Mutex.Lock()
+	for i := range s.Games {
+		if s.Games[i].Id == id {
+			s.Games[i].Turn = *updateGameDTO.Turn
+			s.Games[i].StartAt = updateGameDTO.StartAt
+			s.Games[i].Winner = updateGameDTO.Winner
+			updatedGame = s.Games[i]
+		}
+	}
+	s.Mutex.Unlock()
+
+	return updatedGame
 }
 
 // Player
 func (s *GameService) GetPlayer(game *model.Game, playerId uuid.UUID) *model.Player {
-	return util.FindSlice(game.Players, func(p *model.Player) bool {
-		return p.Id == playerId
+	return *util.FindSlice(&game.Players, func(p **model.Player) bool {
+		return (*p).Id == playerId
 	})
 }
 
 func (s *GameService) GetPlayerFromUserId(game *model.Game, userId uuid.UUID) *model.Player {
-	return util.FindSlice(game.Players, func(p *model.Player) bool {
-		return p.User.Id == userId
+	return *util.FindSlice(&game.Players, func(p **model.Player) bool {
+		return (*p).User.Id == userId
 	})
 }
 
 func (s *GameService) QueuePlayer(client *model.Client, totalPlayer int) error {
 	s.socketService.Mutex.Lock()
-	queuePlayers := util.FilterSlice(&s.socketService.Queues, func(queue *model.Queue) bool {
-		return queue.GameTotalPlayer == totalPlayer && queue.Client.User.Id != client.User.Id
+	queuePlayers := util.FilterSlice(&s.socketService.Queues, func(queue **model.Queue) bool {
+		return (*queue).GameTotalPlayer == totalPlayer && (*queue).Client.User.Id != client.User.Id
 	})
 	if len(queuePlayers)+1 < totalPlayer {
 		// add to queue
 		newUuid, _ := uuid.NewRandom()
-		s.socketService.Queues = append(s.socketService.Queues, model.Queue{
+		s.socketService.Queues = append(s.socketService.Queues, &model.Queue{
 			Id:              newUuid,
 			GameTotalPlayer: totalPlayer,
 			Client:          client,
@@ -111,31 +133,31 @@ func (s *GameService) QueuePlayer(client *model.Client, totalPlayer int) error {
 	} else {
 		// start game
 		newUuid, _ := uuid.NewRandom()
-		queuePlayers = append(queuePlayers, model.Queue{
+		queuePlayers = append(queuePlayers, &model.Queue{
 			Id:              newUuid,
 			GameTotalPlayer: totalPlayer,
 			Client:          client,
 			CreatedAt:       time.Now(),
 		})
 		// remove from queue
-		s.socketService.Queues = util.FilterSlice(&s.socketService.Queues, func(queue *model.Queue) bool {
-			return queue.GameTotalPlayer != totalPlayer && queue.Client.User.Id != client.User.Id
+		s.socketService.Queues = util.FilterSlice(&s.socketService.Queues, func(queue **model.Queue) bool {
+			return (*queue).GameTotalPlayer != totalPlayer && (*queue).Client.User.Id != client.User.Id
 		})
 
 		game, err := s.CreateGame(CreateGameDTO{
 			TotalPlayer: totalPlayer,
-			Users: util.MapSlice(&queuePlayers, func(player model.Queue) model.User {
-				return *player.Client.User
+			Users: util.MapSlice(&queuePlayers, func(p *model.Queue) *model.User {
+				return (*p).Client.User
 			}),
 		})
 		if err != nil {
 			return err
 		}
-		s.Games = append(s.Games, game)
+		s.Games = append(s.Games, &game)
 
 		room := s.socketService.CreateRoom(&game)
-		room.Clients = util.MapSlice(&queuePlayers, func(queue model.Queue) model.Client {
-			return *queue.Client
+		room.Clients = util.MapSlice(&queuePlayers, func(queue *model.Queue) *model.Client {
+			return queue.Client
 		})
 
 		err = s.socketService.BroadcastToRoom(room, model.Payload{
@@ -152,27 +174,22 @@ func (s *GameService) QueuePlayer(client *model.Client, totalPlayer int) error {
 	return nil
 }
 
-func (s *GameService) PlayerReady(gameId uuid.UUID, playerId uuid.UUID) (isAllReady bool) {
+func (s *GameService) PlayerReady(game *model.Game, player *model.Player) (isAllReady bool) {
 	isAllReady = false
-	game := s.GetGame(gameId)
-	for i, player := range *game.Players {
-		if player.Id == playerId {
-			(*game.Players)[i].Status = true
-		}
-	}
+	player.Status = true
 
-	return util.FindSlice(game.Players, func(p *model.Player) bool {
-		return !p.Status
+	return util.FindSlice(&game.Players, func(p **model.Player) bool {
+		return !(*p).Status
 	}) == nil
 }
 
-func CreateTiles() []model.Tile {
-	var tiles []model.Tile
+func CreateTiles() []*model.Tile {
+	var tiles []*model.Tile
 	size := 5
 	for y := range size {
 		for x := range size {
 			newUuid, _ := uuid.NewRandom()
-			tiles = append(tiles, model.Tile{
+			tiles = append(tiles, &model.Tile{
 				Id:       newUuid,
 				X:        x,
 				Y:        y,

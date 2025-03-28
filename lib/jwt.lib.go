@@ -17,7 +17,7 @@ func CreateJWT(sub string) (string, error) {
 	privateKey, _ := parsePrivateKey(config.JWTPrivateKey)
 	claims := jwt.RegisteredClaims{
 		Subject:   sub,
-		ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(5 * time.Hour)},
+		ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(3 * 24 * time.Hour)},
 		IssuedAt:  &jwt.NumericDate{Time: time.Now()},
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(privateKey)

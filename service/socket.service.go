@@ -11,8 +11,8 @@ import (
 )
 
 type SocketService struct {
-	Clients []model.Client
-	Queues  []model.Queue
+	Clients []*model.Client
+	Queues  []*model.Queue
 	Rooms   []*model.Room
 	MaxRoom int
 	Mutex   sync.RWMutex
@@ -20,8 +20,8 @@ type SocketService struct {
 
 func NewSocketService(maxRoom int) *SocketService {
 	return &SocketService{
-		Clients: []model.Client{},
-		Queues:  []model.Queue{},
+		Clients: []*model.Client{},
+		Queues:  []*model.Queue{},
 		Rooms:   []*model.Room{},
 		MaxRoom: maxRoom,
 	}
@@ -37,8 +37,8 @@ func (s *SocketService) CreateClient(conn *websocket.Conn, user *model.User) *mo
 }
 
 func (s *SocketService) RemoveClient(client *model.Client) {
-	s.Clients = util.FilterSlice(&s.Clients, func(c *model.Client) bool {
-		return c.Id != client.Id
+	s.Clients = util.FilterSlice(&s.Clients, func(c **model.Client) bool {
+		return (*c).Id != client.Id
 	})
 }
 
@@ -55,7 +55,7 @@ func (s *SocketService) CreateRoom(game *model.Game) *model.Room {
 	id, _ := uuid.NewRandom()
 	newRoom := &model.Room{
 		Id:      id,
-		Clients: []model.Client{},
+		Clients: []*model.Client{},
 		Game:    game,
 	}
 
@@ -69,14 +69,14 @@ func (s *SocketService) AddClientToRoom(room *model.Room, client *model.Client) 
 	defer s.Mutex.Unlock()
 
 	room.Mutex.Lock()
-	room.Clients = append(room.Clients, *client)
+	room.Clients = append(room.Clients, client)
 	room.Mutex.Unlock()
 }
 
 func (s *SocketService) RemoveClientFromRoom(room *model.Room, client *model.Client) {
 	room.Mutex.Lock()
-	room.Clients = util.FilterSlice(&room.Clients, func(roomClient *model.Client) bool {
-		return roomClient.Id != client.Id
+	room.Clients = util.FilterSlice(&room.Clients, func(c **model.Client) bool {
+		return (*c).Id != client.Id
 	})
 	room.Mutex.Unlock()
 
@@ -89,7 +89,7 @@ func (s *SocketService) RemoveClientFromRoom(room *model.Room, client *model.Cli
 
 func (s *SocketService) Broadcast(message model.Payload) error {
 	for _, client := range s.Clients {
-		err := s.SendMessage(&client, &message)
+		err := s.SendMessage(client, &message)
 		if err != nil {
 			fmt.Println(err)
 			return err
@@ -112,7 +112,7 @@ func (s *SocketService) BroadcastToRoom(room *model.Room, message model.Payload)
 	defer room.Mutex.RUnlock()
 
 	for _, client := range room.Clients {
-		err := s.SendMessage(&client, &message)
+		err := s.SendMessage(client, &message)
 		if err != nil {
 			fmt.Println(err)
 			return err

@@ -25,7 +25,7 @@ type (
 
 	Room struct {
 		Id      uuid.UUID `json:"id"`
-		Clients []Client
+		Clients []*Client
 		Game    *Game
 		Mutex   sync.RWMutex
 	}
