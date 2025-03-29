@@ -62,14 +62,15 @@ func (s *GameService) CreateGame(dto CreateGameDTO) (model.Game, error) {
 		Players:     players,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
-		GameTiles: util.MapSlice(&dto.Users, func(u *model.User) *model.GameTile {
+		GameTiles: util.MapSlice(&players, func(p *model.Player) *model.GameTile {
 			newUuid, _ := uuid.NewRandom()
 			return &model.GameTile{
-				Id:    newUuid,
-				Tiles: createTiles(),
+				Id:       newUuid,
+				Tiles:    createTiles(),
+				PlayerId: p.Id,
 			}
 		}),
-		MarkedTiles: []model.MarkedTile{},
+		MarkedTiles: []*model.MarkedTile{},
 	}
 
 	return newGame, nil
@@ -81,35 +82,7 @@ func (s *GameService) GetGame(id uuid.UUID) *model.Game {
 	})
 }
 
-type UpdateGameDTO struct {
-	Turn    *string
-	StartAt *time.Time
-	Winner  *model.User
-}
-
-func (s *GameService) UpdateGame(id uuid.UUID, updateGameDTO UpdateGameDTO) *model.Game {
-	var updatedGame *model.Game
-	s.Mutex.Lock()
-	for i := range s.Games {
-		if s.Games[i].Id == id {
-			s.Games[i].Turn = *updateGameDTO.Turn
-			s.Games[i].StartAt = updateGameDTO.StartAt
-			s.Games[i].Winner = updateGameDTO.Winner
-			updatedGame = s.Games[i]
-		}
-	}
-	s.Mutex.Unlock()
-
-	return updatedGame
-}
-
 // Player
-func (s *GameService) GetPlayer(game *model.Game, playerId uuid.UUID) *model.Player {
-	return *util.FindSlice(&game.Players, func(p **model.Player) bool {
-		return (*p).Id == playerId
-	})
-}
-
 func (s *GameService) GetPlayerFromUserId(game *model.Game, userId uuid.UUID) *model.Player {
 	return *util.FindSlice(&game.Players, func(p **model.Player) bool {
 		return (*p).User.Id == userId
@@ -200,18 +173,19 @@ func createTiles() []*model.Tile {
 }
 
 func (s *GameService) MarkTile(game *model.Game, number int) {
-	for i := range game.GameTiles {
-		for j := range game.GameTiles[i].Tiles {
-			if game.GameTiles[i].Tiles[j].Number == number {
-				game.GameTiles[i].Tiles[j].IsMarked = true
-				break
+	for _, gameTile := range game.GameTiles {
+	playerTiles:
+		for _, tile := range gameTile.Tiles {
+			if tile.Number == number {
+				tile.IsMarked = true
+				break playerTiles
 			}
 		}
 	}
 
 	// add to marked tile
 	newUuid, _ := uuid.NewRandom()
-	game.MarkedTiles = append(game.MarkedTiles, model.MarkedTile{
+	game.MarkedTiles = append(game.MarkedTiles, &model.MarkedTile{
 		Id:     newUuid,
 		Order:  len(game.MarkedTiles) + 1,
 		Number: number,

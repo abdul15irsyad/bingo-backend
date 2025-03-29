@@ -1,5 +1,13 @@
 package util
 
+func RandomSlice[T any](array []T) T {
+	var element T
+	if len(array) == 0 {
+		return element
+	}
+	return array[RandomInt(0, len(array)-1)]
+}
+
 func MapSlice[T any, K any](slice *[]T, mapper func(item T) K) []K {
 	result := make([]K, len(*slice))
 	for i, value := range *slice {

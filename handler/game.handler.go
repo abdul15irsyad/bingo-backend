@@ -5,6 +5,7 @@ import (
 	"bingo/lib"
 	"bingo/model"
 	"bingo/service"
+	"bingo/util"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -101,10 +102,13 @@ func (h *GameHandler) Start(c *gin.Context) {
 			isAllReady := h.gameService.CheckIsAllReady(game)
 			if isAllReady {
 				room := h.socketService.GetRoomFromGame(game.Id)
+				now := time.Now()
+				game.PlayerTurnId = &util.RandomSlice(game.Players).Id
+				game.StartAt = &now
 				err := h.socketService.BroadcastToRoom(room, model.Payload{
 					Type:      model.GameStartType,
-					Content:   nil,
-					CreatedAt: time.Now(),
+					Content:   game,
+					CreatedAt: now,
 				})
 				if err != nil {
 					c.Error(err)
